@@ -117,6 +117,66 @@ const addPayment = async (req, res) => {
   }
 };
 
+const createInvoice = async (req, res) => {
+  const { invoiceNumber, customerName, issueDate, dueDate, lineItems } = req.body;
+
+  // Validate required fields
+  if (!invoiceNumber || !customerName || !issueDate || !dueDate) {
+    return res.status(400).json({ message: "Missing required fields: invoiceNumber, customerName, issueDate, dueDate" });
+  }
+
+  if (!lineItems || !Array.isArray(lineItems) || lineItems.length === 0) {
+    return res.status(400).json({ message: "At least one line item is required" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Calculate total from line items
+    const total = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+
+    // Insert invoice
+    const invoiceResult = await client.query(
+      `INSERT INTO invoice (invoicenumber, customername, issuedate, duedate, status, total, amountpaid)
+       VALUES ($1, $2, $3, $4, 'DRAFT', $5, 0)
+       RETURNING *`,
+      [invoiceNumber, customerName, issueDate, dueDate, total]
+    );
+
+    const invoiceId = invoiceResult.rows[0].id;
+
+    // Insert line items
+    for (const item of lineItems) {
+      if (!item.description || !item.quantity || !item.unitPrice) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Each line item must have description, quantity, and unitPrice" });
+      }
+      await client.query(
+        `INSERT INTO invoiceline (invoiceid, description, quantity, unitprice)
+         VALUES ($1, $2, $3, $4)`,
+        [invoiceId, item.description, item.quantity, item.unitPrice]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    res.status(201).json(invoiceResult.rows[0]);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(err);
+
+    if (err.code === '23505') {
+      return res.status(400).json({ message: "Invoice number already exists" });
+    }
+
+    res.status(500).json({ error: "Failed to create invoice" });
+  } finally {
+    client.release();
+  }
+};
+
 const archiveInvoice = async (req, res) => {
   try {
     const { id } = req.params;
@@ -165,6 +225,7 @@ module.exports = {
   getInvoiceLines,
   getPayments,
   addPayment,
+  createInvoice,
   archiveInvoice,
   restoreInvoice
 };

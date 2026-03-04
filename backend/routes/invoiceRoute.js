@@ -7,12 +7,16 @@ const {
   getInvoiceLines,
   getPayments,
   addPayment,
+  createInvoice,
   archiveInvoice,
   restoreInvoice
 } = require("../services/invoiceServices");
 
 // List all invoices
 router.get("/invoices", getInvoice);
+
+// Create a new invoice
+router.post("/invoices", createInvoice);
 
 // Invoice detail by ID
 router.get("/invoice/:id", getInvoiceDetail);

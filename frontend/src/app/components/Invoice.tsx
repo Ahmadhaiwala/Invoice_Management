@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Search, Filter } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Filter, Plus } from "lucide-react";
 import Link from "next/link";
 
 interface Invoice {
@@ -70,7 +70,15 @@ export default function InvoiceList() {
   return (
     <div className="w-full text-gray-900">
       {/* Title */}
-      <h2 className="text-3xl font-bold mb-6">Invoices</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-3xl font-bold">Invoices</h2>
+        <Link
+          href="/invoices/create"
+          className="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-3 rounded-xl text-base font-bold hover:bg-green-700 transition-colors"
+        >
+          <Plus size={18} /> New Invoice
+        </Link>
+      </div>
 
       {/* ─── FILTERS BAR ─── */}
       <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-sm p-5 mb-6">
